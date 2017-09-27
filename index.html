@@ -101,10 +101,10 @@
                                 <input required id="tx_amount" class="input" type="number" placeholder="0.01"
                                        step="any">
                             </p>
-                            <p class="control">
-                                <a class="button is-static">
-                                    ETH
-                                </a>
+                            <p class="control select">
+                                <select id="tx_token_selector">
+                                    <option selected value="ETH">ETH</option>
+                                </select>
                             </p>
                         </div>
                     </div>
@@ -256,7 +256,7 @@
                 <div class="column has-text-centered">
                     <large>&#8594;</large>
                     <br>
-                    <large>Amount: <strong><span id="amount_confirm"></span></strong> ETH</large>
+                    <large>Amount: <strong><span id="amount_confirm"></span></strong></large>
                     <br>
                     <small>Fee: <strong><span id="fee_confirm"></span></strong> ETH</small>
                 </div>

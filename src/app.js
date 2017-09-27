@@ -5,6 +5,8 @@ import * as ethereumjsWallet from 'ethereumjs-wallet'
 import * as bip39 from 'bip39'
 import * as hdkey from 'ethereumjs-wallet/hdkey'
 import ethereumTx from 'ethereumjs-tx'
+import ethereumAbi from 'ethereumjs-abi'
+import ethTokens from './ethTokens.json'
 
 (function () {
   const WEIINETHER = 1000000000000000000
@@ -19,6 +21,16 @@ import ethereumTx from 'ethereumjs-tx'
     document.getElementById('mnemonic_unlock_passphrase').value = ''
     document.getElementById('private_key_unlock_key').value = ''
     document.getElementById('keystore_unlock_passphrase').value = ''
+  }
+
+  // add tokens
+  let select = document.getElementById('tx_token_selector')
+
+  for (let i = 0; i < ethTokens.length; i++) {
+    let opt = document.createElement('option')
+    opt.value = ethTokens[i].address
+    opt.innerHTML = ethTokens[i].symbol
+    select.appendChild(opt)
   }
 
   // -- Important part for Review ---
@@ -62,15 +74,42 @@ import ethereumTx from 'ethereumjs-tx'
           nonce: parseInt(document.getElementById(donate ? 'nonce_donate' : 'tx_nonce').value),
           gasPrice: parseInt(document.getElementById('tx_gasprice_selector').value * WEIINGWEI),
           gasLimit: parseInt(document.getElementById('tx_gas_limit').value),
-          to: donate ? '0xc29F56Bf3f3978438dc714e83fdb57ea773ACa17' : document.getElementById('tx_to_address').value,
-          value: donate ? parseFloat(donateValue) : parseFloat(document.getElementById('tx_amount').value) * WEIINETHER,
-          data: document.getElementById('tx_data').value,
           // EIP 155 chainId - mainnet: 1, ropsten: 3
           chainId: 1
         }
+
+        // if a token is selected
+        if (document.getElementById('tx_token_selector').value !== 'ETH') {
+          let token = ethTokens.find(obj => obj.address === document.getElementById('tx_token_selector').value)
+          // transferFrom(address _from,address _to,uint256 _amount)
+          txParams.to = token.address
+          txParams.value = '0x0'
+          txParams.data = ethereumAbi.rawEncode(['address', 'address', 'uint256'], [
+            wallet.getAddress().toString('hex'),
+            document.getElementById('tx_to_address').value,
+            parseFloat(document.getElementById('tx_amount').value) * token.decimals
+          ])
+        } else {
+          txParams.to = donate ? '0xc29F56Bf3f3978438dc714e83fdb57ea773ACa17' : document.getElementById('tx_to_address').value
+          txParams.value = donate ? parseFloat(donateValue) : parseFloat(document.getElementById('tx_amount').value) * WEIINETHER
+          txParams.data = document.getElementById('tx_data').value
+          // EIP 155 chainId - mainnet: 1, ropsten: 3
+          txParams.chainId = 1
+        }
+
         const tx = new ethereumTx(txParams)
+
+        if (document.getElementById('tx_token_selector').value !== 'ETH') {
+          let token = ethTokens.find(obj => obj.address === document.getElementById('tx_token_selector').value)
+          tx.token = {
+            amount: parseFloat(document.getElementById('tx_amount').value),
+            symbol: token.symbol
+          }
+        }
+
         tx.sign(wallet.getPrivateKey())
         successCallback(tx)
+
       }, errorCallback)
     } catch (error) {
       errorCallback(error.message)
@@ -179,9 +218,14 @@ import ethereumTx from 'ethereumjs-tx'
       document.getElementById('from_identicon_confirm').style.paddingBottom = '0'
       document.getElementById('to_identicon_confirm').src = blockies.toDataUrl('0x' + tx.to.toString('hex'))
       document.getElementById('to_identicon_confirm').style.paddingBottom = '0'
-      document.getElementById('amount_confirm').textContent = parseInt(tx.value.toString('hex'), 16) / WEIINETHER
+      document.getElementById('amount_confirm').textContent = parseInt(tx.value.toString('hex'), 16) / WEIINETHER + ' ETH'
       document.getElementById('fee_confirm').textContent = (parseInt(tx.gas.toString('hex'), 16) * parseInt(tx.gasPrice.toString('hex'), 16)) / WEIINETHER
       document.getElementById('confirm_modal').classList.add('is-active')
+
+      if (tx.token) {
+        document.getElementById('amount_confirm').textContent = tx.token.amount + ' ' + tx.token.symbol
+      }
+
       qrcode.toDataURL(tx.serialize().toString('hex'), function (err, url) {
         document.getElementById('qr_holder').src = url
       })
