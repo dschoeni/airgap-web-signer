@@ -74,8 +74,7 @@ import ethTokens from './ethTokens.json'
           nonce: parseInt(document.getElementById(donate ? 'nonce_donate' : 'tx_nonce').value),
           gasPrice: parseInt(document.getElementById('tx_gasprice_selector').value * WEIINGWEI),
           gasLimit: parseInt(document.getElementById('tx_gas_limit').value),
-          // EIP 155 chainId - mainnet: 1, ropsten: 3
-          chainId: 1
+          chainId: parseInt(document.getElementById('tx_chainid_selector').value)
         }
 
         // if a token is selected
